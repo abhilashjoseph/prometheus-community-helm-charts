@@ -6,6 +6,8 @@ image:
   repository: kbudde/rabbitmq-exporter
   tag: v0.29.0
   pullPolicy: IfNotPresent
+  pullSecrets: []
+
 service:
   type: ClusterIP
   externalPort: 9419
@@ -48,6 +50,11 @@ rabbitmq:
   output_format: "TTY"
   timeout: 30
   max_queues: 0
+  excludeMetrics: ""
+
+## Additional labels to set in the Deployment object. Together with standard labels from
+## the chart
+additionalLabels: {}
 
 podLabels: {}
 
@@ -62,6 +69,16 @@ prometheus:
     additionalLabels: {}
     interval: 15s
     namespace: []
+    metricRelabelings: []
+    relabelings: []
   rules:
     enabled: false
     additionalLabels: {}
+
+serviceAccount:
+  # Specifies whether a ServiceAccount should be created
+  create: true
+  # The name of the ServiceAccount to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name:
+  annotations: {}

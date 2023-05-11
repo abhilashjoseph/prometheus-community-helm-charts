@@ -52,3 +52,27 @@ Return the appropriate apiVersion for rbac.
 {{- print "rbac.authorization.k8s.io/v1beta1" -}}
 {{- end -}}
 {{- end -}} 
+
+{{/*
+Create the name of the SASL SCRAM secret to use
+*/}}
+{{- define "prometheus-kafka-exporter.saslScramSecretName" -}}
+{{- if .Values.sasl.scram.secretName -}}
+    {{ .Values.sasl.scram.secretName }}
+{{- else -}}
+    {{ include "prometheus-kafka-exporter.fullname" . }}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Formats imagePullSecrets. Input is (dict "Values" .Values "imagePullSecrets" .{specific imagePullSecrets})
+*/}}
+{{- define "prometheus-kafka-exporter.imagePullSecrets" -}}
+{{- range (concat .Values.global.imagePullSecrets .imagePullSecrets) }}
+  {{- if eq (typeOf .) "map[string]interface {}" }}
+- {{ toYaml . | trim }}
+  {{- else }}
+- name: {{ . }}
+  {{- end }}
+{{- end }}
+{{- end -}}

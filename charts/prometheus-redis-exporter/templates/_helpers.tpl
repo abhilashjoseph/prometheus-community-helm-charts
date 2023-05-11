@@ -52,3 +52,26 @@ Return the appropriate apiVersion for rbac.
 {{- print "rbac.authorization.k8s.io/v1beta1" -}}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Common labels
+*/}}
+{{- define "prometheus-redis-exporter.labels" -}}
+helm.sh/chart: {{ include "prometheus-redis-exporter.chart" . }}
+{{ include "prometheus-redis-exporter.selectorLabels" . }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- if .Values.customLabels}}
+{{ toYaml .Values.customLabels }}
+{{- end }}
+{{- end }}
+
+{{/*
+Selector labels
+*/}}
+{{- define "prometheus-redis-exporter.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "prometheus-redis-exporter.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}

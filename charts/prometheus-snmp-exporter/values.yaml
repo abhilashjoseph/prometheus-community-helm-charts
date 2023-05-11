@@ -1,13 +1,29 @@
 restartPolicy: Always
 
+kind: Deployment
+
 image:
   repository: prom/snmp-exporter
-  tag: v0.19.0
+  # if not set appVersion field from Chart.yaml is used
+  tag: ""
   pullPolicy: IfNotPresent
 
+imagePullSecrets: []
 nodeSelector: {}
 tolerations: []
 affinity: {}
+
+## Security context to be added to snmp-exporter pods
+securityContext: {}
+  # fsGroup: 1000
+  # runAsUser: 1000
+  # runAsNonRoot: true
+
+## Security context to be added to snmp-exporter containers
+containerSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  readOnlyRootFilesystem: true
 
 ## Additional labels to add to all resources
 customLabels: {}
@@ -51,6 +67,15 @@ resources: {}
   # requests:
   #   memory: 50Mi
 
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+readinessProbe:
+  httpGet:
+    path: /health
+    port: http
+
 service:
   annotations: {}
   type: ClusterIP
@@ -62,8 +87,12 @@ service:
 ## ref: https://kubernetes.io/docs/concepts/services-networking/ingress/
 ingress:
   enabled: false
+  ## Class name can be set since version 1.18.
+  className: ""
+  ## Path type is required since version 1.18. Default: ImplementationSpecific.
+  pathType: ""
   hosts: []
-     # - chart-example.local
+    # - chart-example.local
   annotations: {}
     # kubernetes.io/ingress.class: nginx
     # kubernetes.io/tls-acme: "true"
@@ -99,30 +128,58 @@ configmapReload:
   ##
   resources: {}
 
-# Enable this if you're using https://github.com/coreos/prometheus-operator
+# Enable this if you're using https://github.com/prometheus-operator/prometheus-operator
+# A service monitor will be created per each item in serviceMonitor.params[]
 serviceMonitor:
   enabled: false
   namespace: monitoring
 
-  # fallback to the prometheus default unless specified
-  # interval: 10s
+  path: /snmp
 
-  ## Defaults to what's used if you follow CoreOS [Prometheus Install Instructions](https://github.com/helm/charts/tree/master/stable/prometheus-operator#tldr)
-  ## [Prometheus Selector Label](https://github.com/helm/charts/tree/master/stable/prometheus-operator#prometheus-operator-1)
-  ## [Kube Prometheus Selector Label](https://github.com/helm/charts/tree/master/stable/prometheus-operator#exporters)
+  # Fall back to the prometheus default unless specified
+  # interval: 10s
+  scrapeTimeout: 10s
+  module:
+    - if_mib
+
+  # Relabelings dynamically rewrite the label set of a target before it gets scraped.
+  # Set if defined unless overriden by params.relabelings.
+  # https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api.md#monitoring.coreos.com/v1.RelabelConfig
+  relabelings: []
+    # - sourceLabels: [__address__]
+    #   targetLabel: __param_target
+    # - sourceLabels: [__param_target]
+    #   targetLabel: instance
+
+  # Metric relabeling is applied to samples as the last step before ingestion.
+  # Set if defined unless overriden by params.additionalMetricsRelabels.
+  additionalMetricsRelabels: {}
+
+  # Label for selecting service monitors as set in Prometheus CRD.
+  # https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api.md#monitoring.coreos.com/v1.PrometheusSpec
   selector:
     prometheus: kube-prometheus
-  # Retain the job and instance labels of the metrics pushed to the snmp-exporter
-  # [Scraping SNMP-exporter](https://github.com/prometheus/snmp_exporter#configure-the-snmp_exporter-as-a-target-to-scrape)
+
+  # Retain the job and instance labels of the metrics retrieved by the snmp-exporter
+  # https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api.md#monitoring.coreos.com/v1.Endpoint
   honorLabels: true
 
-  params:
-    enabled: false
-    conf:
-      module:
-      - if_mib
-      target:
-      - 127.0.0.1
-
-  path: /snmp
-  scrapeTimeout: 10s
+  params: []
+    # Human readable URL that will appear in Prometheus / AlertManager
+    # - name: localhost
+    # The target that snmp will scrape
+    #   target: 127.0.0.1
+    # Module used for scraping. Overrides value set in serviceMonitor.module
+    #   module:
+    #     - if_mib
+    # Map of labels for ServiceMonitor. Overrides value set in serviceMonitor.selector
+    #   labels: {}
+          # release: kube-prometheus-stack
+    # Scraping interval. Overrides value set in serviceMonitor.interval
+    #   interval: 30s
+    # Scrape timeout. Overrides value set in serviceMonitor.scrapeTimeout
+    #   scrapeTimeout: 30s
+    # Relabelings. Overrides value set in serviceMonitor.relabelings
+    #   relabelings: []
+    # Map of metric labels and values to add. Overrides value set in serviceMonitor.additionalMetricsRelabels
+    #   additionalMetricsRelabels: {}

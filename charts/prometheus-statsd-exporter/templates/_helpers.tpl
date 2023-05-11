@@ -48,6 +48,9 @@ Selector labels
 {{- define "prometheus-statsd-exporter.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "prometheus-statsd-exporter.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
+{{- with .Values.podLabels }}
+{{ toYaml . }}
+{{- end }}
 {{- end }}
 
 {{/*
@@ -66,7 +69,7 @@ Check if there is any mappings available
 */}}
 {{- define "prometheus-statsd-exporter.configMapName"}}
 {{- if .Values.statsd.mappingConfigMapName }}
-{{ default .Values.statsd.mappingConfigMapName }}
+{{- default .Values.statsd.mappingConfigMapName }}
 {{- else }}
 {{- template "prometheus-statsd-exporter.fullname" . -}}
 {{- end }}
